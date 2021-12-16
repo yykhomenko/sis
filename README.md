@@ -1,2 +1,2 @@
-# sis
+# SIS
 Subscriber Information System
