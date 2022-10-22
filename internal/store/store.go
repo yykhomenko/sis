@@ -9,31 +9,31 @@ import (
 
 var ErrNotExist = errors.New("info not exist")
 
+func NewStore() Store {
+	return &inMemStore{
+		infos: make(map[int64]*entity.Info),
+	}
+}
+
 type Store interface {
 	Get(int64) (*entity.Info, error)
 	Set(info *entity.Info) error
 }
 
-type database struct {
+type inMemStore struct {
 	infos map[int64]*entity.Info
 }
 
-func NewStore() Store {
-	return &database{
-		infos: make(map[int64]*entity.Info),
-	}
-}
-
-func (db *database) Get(msisdn int64) (*entity.Info, error) {
-	info, exist := db.infos[msisdn]
+func (s *inMemStore) Get(msisdn int64) (*entity.Info, error) {
+	info, exist := s.infos[msisdn]
 	if !exist {
 		return nil, ErrNotExist
 	}
 	return info, nil
 }
 
-func (db *database) Set(info *entity.Info) error {
+func (s *inMemStore) Set(info *entity.Info) error {
 	info.ChangeDate = time.Now()
-	db.infos[info.Msisdn] = info
+	s.infos[info.Msisdn] = info
 	return nil
 }

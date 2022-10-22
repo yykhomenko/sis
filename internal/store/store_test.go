@@ -7,7 +7,7 @@ import (
 	"github.com/yykhomenko/sis/internal/entity"
 )
 
-var testInto = &entity.Info{
+var testInfo = &entity.Info{
 	Msisdn:       0501234567,
 	BillingType:  1,
 	LanguageType: 2,
@@ -17,15 +17,31 @@ var testInto = &entity.Info{
 func TestStore(t *testing.T) {
 	store := NewStore()
 
-	err := store.Set(testInto)
+	err := store.Set(testInfo)
 	assert.Nil(t, err)
 
-	info, err := store.Get(testInto.Msisdn)
+	info, err := store.Get(testInfo.Msisdn)
 	assert.Nil(t, err)
 	assert.NotNil(t, info)
-	assert.Equal(t, testInto.Msisdn, info.Msisdn)
-	assert.Equal(t, testInto.BillingType, info.BillingType)
-	assert.Equal(t, testInto.LanguageType, info.LanguageType)
-	assert.Equal(t, testInto.OperatorType, info.OperatorType)
-	assert.NotNil(t, info.ChangeDate)
+	assert.Equal(t, testInfo.Msisdn, info.Msisdn)
+	assert.Equal(t, testInfo.BillingType, info.BillingType)
+	assert.Equal(t, testInfo.LanguageType, info.LanguageType)
+	assert.Equal(t, testInfo.OperatorType, info.OperatorType)
+	assert.NotNil(t, testInfo.ChangeDate)
+}
+
+func BenchmarkStore_Get(b *testing.B) {
+	store := NewStore()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = store.Get(testInfo.Msisdn)
+	}
+}
+
+func BenchmarkStore_Set(b *testing.B) {
+	store := NewStore()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = store.Set(testInfo)
+	}
 }
