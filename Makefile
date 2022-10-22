@@ -1,5 +1,5 @@
 build: ## Build version
-	go build -v ./cmd/sis
+	go build ./cmd/sis
 
 test: ## Run all tests
 	go test -race -timeout 10s ./...
@@ -13,7 +13,7 @@ run: ## Run version
 install: ## Install version
 	make build
 	make test
-	go install -v ./cmd/sis
+	go install ./cmd/sis
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \

@@ -17,17 +17,21 @@ var testInfo = &entity.Info{
 func TestStore(t *testing.T) {
 	store := NewStore()
 
-	err := store.Set(testInfo)
-	assert.Nil(t, err)
+	t.Run("Set", func(t *testing.T) {
+		err := store.Set(testInfo)
+		assert.Nil(t, err)
+	})
 
-	info, err := store.Get(testInfo.Msisdn)
-	assert.Nil(t, err)
-	assert.NotNil(t, info)
-	assert.Equal(t, testInfo.Msisdn, info.Msisdn)
-	assert.Equal(t, testInfo.BillingType, info.BillingType)
-	assert.Equal(t, testInfo.LanguageType, info.LanguageType)
-	assert.Equal(t, testInfo.OperatorType, info.OperatorType)
-	assert.NotNil(t, testInfo.ChangeDate)
+	t.Run("Get", func(t *testing.T) {
+		info, err := store.Get(testInfo.Msisdn)
+		assert.Nil(t, err)
+		assert.NotNil(t, info)
+		assert.Equal(t, testInfo.Msisdn, info.Msisdn)
+		assert.Equal(t, testInfo.BillingType, info.BillingType)
+		assert.Equal(t, testInfo.LanguageType, info.LanguageType)
+		assert.Equal(t, testInfo.OperatorType, info.OperatorType)
+		assert.NotNil(t, testInfo.ChangeDate)
+	})
 }
 
 func BenchmarkStore_Get(b *testing.B) {
