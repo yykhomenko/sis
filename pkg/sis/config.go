@@ -9,6 +9,7 @@ type Config struct {
 	Addr         string `env:"SIS_ADDR" envDefault:":8080"`
 	CC           string `env:"SIS_CC" envDefault:"380"`
 	NDCS         []int  `env:"HASHES_NDCS" envSeparator:"," envDefault:"67"`
+	NDCCap       int    `env:"HASHES_NDC_CAPACITY" envDefault:"10000000"`
 	MsisdnLength int    `env:"SIS_MSISDN_LENGTH" envDefault:"12"`
 }
 

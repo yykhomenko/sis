@@ -14,7 +14,8 @@ var testInfo = &Info{
 }
 
 func TestStore(t *testing.T) {
-	store := NewStore()
+	config := NewConfig()
+	store := NewStore(config)
 
 	t.Run("Set", func(t *testing.T) {
 		err := store.Set(testInfo)
@@ -34,7 +35,8 @@ func TestStore(t *testing.T) {
 }
 
 func BenchmarkStore_Get(b *testing.B) {
-	store := NewStore()
+	config := NewConfig()
+	store := NewStore(config)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = store.Get(testInfo.Msisdn)
@@ -42,7 +44,8 @@ func BenchmarkStore_Get(b *testing.B) {
 }
 
 func BenchmarkStore_Set(b *testing.B) {
-	store := NewStore()
+	config := NewConfig()
+	store := NewStore(config)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = store.Set(testInfo)

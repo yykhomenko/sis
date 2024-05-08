@@ -10,7 +10,7 @@ import (
 
 type Server struct {
 	config  *Config
-	store   *Store
+	store   Store
 	counter *counter
 }
 
@@ -24,7 +24,7 @@ type response struct {
 	ErrorMsg string `json:"errorMsg,omitempty"`
 }
 
-func NewServer(c *Config, s *Store) *Server {
+func NewServer(c *Config, s Store) *Server {
 	return &Server{
 		config:  c,
 		store:   s,
@@ -52,24 +52,9 @@ func (s *Server) getRoot() func(c *fiber.Ctx) error {
 func (s *Server) getMetrics() func(c *fiber.Ctx) error {
 	return func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).SendString(fmt.Sprintf(
-			"hashes_total %d\nmsisdns_total %d\n",
-			s.counter.hashes,
-			s.counter.msisdns,
+			"subscribers_total %d\n",
+			s.counter.subscribers,
 		))
-	}
-}
-
-func (s *Server) getMsisdns() func(c *fiber.Ctx) error {
-	return func(c *fiber.Ctx) error {
-		atomic.AddUint64(&s.counter.msisdns, 1)
-		hash := c.Params("hash")
-		msisdn, exists := s.store.Msisdn(hash)
-
-		if !exists {
-			return c.Status(fiber.StatusNotFound).JSON(response{ErrorID: 1, ErrorMsg: "Not found"})
-		}
-
-		return c.Status(fiber.StatusOK).JSON(response{Value: s.config.CC + msisdn})
 	}
 }
 
@@ -90,7 +75,18 @@ func (s *Server) getHashes() func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 4, ErrorMsg: "Not supported NDC: " + ndc})
 		}
 
-		return c.Status(fiber.StatusOK).JSON(response{Value: s.store.Hash(msisdn[3:])})
+		//m, err := strconv.Atoi(msisdn[:len(s.config.CC)])
+		m, err := strconv.ParseInt(msisdn, 10, 64)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 2, ErrorMsg: "Not supported MSISDN format: " + msisdn})
+		}
+
+		info, err := s.store.Get(m)
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(response{ErrorID: 1, ErrorMsg: "Not found"})
+		}
+
+		return c.Status(fiber.StatusOK).JSON(info)
 	}
 }
 
