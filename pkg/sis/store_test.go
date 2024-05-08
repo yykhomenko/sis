@@ -1,13 +1,12 @@
-package store
+package sis
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/yykhomenko/sis/internal/entity"
 )
 
-var testInfo = &entity.Info{
+var testInfo = &Info{
 	Msisdn:       0501234567,
 	BillingType:  1,
 	LanguageType: 2,
