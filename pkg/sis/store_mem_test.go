@@ -1,6 +1,7 @@
 package sis
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,15 +16,16 @@ var testInfo = &Info{
 
 func TestStore(t *testing.T) {
 	config := NewConfig()
-	store := NewStore(config)
+	store := NewStoreMem(config)
+	ctx := context.Background()
 
 	t.Run("Set", func(t *testing.T) {
-		err := store.Set(testInfo)
+		err := store.Set(ctx, testInfo)
 		assert.Nil(t, err)
 	})
 
 	t.Run("Get", func(t *testing.T) {
-		info, err := store.Get(testInfo.Msisdn)
+		info, err := store.Get(ctx, testInfo.Msisdn)
 		assert.Nil(t, err)
 		assert.NotNil(t, info)
 		assert.Equal(t, testInfo.Msisdn, info.Msisdn)
@@ -36,18 +38,20 @@ func TestStore(t *testing.T) {
 
 func BenchmarkStore_Get(b *testing.B) {
 	config := NewConfig()
-	store := NewStore(config)
+	store := NewStoreMem(config)
+	ctx := context.Background()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = store.Get(testInfo.Msisdn)
+		_, _ = store.Get(ctx, testInfo.Msisdn)
 	}
 }
 
 func BenchmarkStore_Set(b *testing.B) {
 	config := NewConfig()
-	store := NewStore(config)
+	store := NewStoreMem(config)
+	ctx := context.Background()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = store.Set(testInfo)
+		_ = store.Set(ctx, testInfo)
 	}
 }
