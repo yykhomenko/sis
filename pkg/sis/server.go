@@ -76,7 +76,6 @@ func (s *Server) getHashes() func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 4, ErrorMsg: "Not supported NDC: " + ndc})
 		}
 
-		//m, err := strconv.Atoi(msisdn[:len(s.config.CC)])
 		m, err := strconv.ParseInt(msisdn, 10, 64)
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 2, ErrorMsg: "Not supported MSISDN format: " + msisdn})
