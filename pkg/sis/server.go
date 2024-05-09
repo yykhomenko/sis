@@ -1,6 +1,7 @@
 package sis
 
 import (
+	"context"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"log"
@@ -81,7 +82,8 @@ func (s *Server) getHashes() func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 2, ErrorMsg: "Not supported MSISDN format: " + msisdn})
 		}
 
-		info, err := s.store.Get(m)
+		ctx := context.Background()
+		info, err := s.store.Get(ctx, m)
 		if err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(response{ErrorID: 1, ErrorMsg: "Not found"})
 		}
