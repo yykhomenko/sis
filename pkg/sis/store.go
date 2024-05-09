@@ -7,11 +7,11 @@ import (
 )
 
 type Info struct {
-	Msisdn       int64
-	BillingType  int8
-	LanguageType int8
-	OperatorType int8
-	ChangeDate   time.Time
+	Msisdn       int64     `json:"msisdn"`
+	BillingType  int8      `json:"billing_type"`
+	LanguageType int8      `json:"language_type"`
+	OperatorType int8      `json:"operator_type"`
+	ChangeDate   time.Time `json:"change_date"`
 }
 
 type Store interface {

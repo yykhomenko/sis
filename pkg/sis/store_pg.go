@@ -16,13 +16,27 @@ type pgStore struct {
 }
 
 func NewStorePG(config *Config) Store {
-	pool, err := pgxpool.New(
+
+	poolConfig, err := pgxpool.ParseConfig(config.DbUrl)
+	if err != nil {
+		log.Fatalf("unable to config pool: %v\n", err)
+	}
+
+	//poolConfig.MaxConns
+
+	pool, err := pgxpool.NewWithConfig(
 		context.Background(),
-		config.DbUrl,
+		poolConfig,
 	)
 	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
+		log.Fatalf("unable to connect to database: %v\n", err)
 	}
+
+	log.Printf("connected to database: %s:%d/%s\n",
+		pool.Config().ConnConfig.Host,
+		pool.Config().ConnConfig.Port,
+		pool.Config().ConnConfig.Database,
+	)
 
 	store := &pgStore{config: config, pool: pool}
 
