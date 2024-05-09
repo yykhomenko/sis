@@ -22,8 +22,6 @@ func NewStorePG(config *Config) Store {
 		log.Fatalf("unable to config pool: %v\n", err)
 	}
 
-	//poolConfig.MaxConns
-
 	pool, err := pgxpool.NewWithConfig(
 		context.Background(),
 		poolConfig,
