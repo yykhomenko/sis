@@ -1,6 +1,18 @@
 # SIS
+
 Subscriber Information System
 
+```json
+{
+  "msisdn": 380671234567,
+  "billing_type": 1,
+  "language_type": 0,
+  "operator_type": 1,
+  "change_date": "2024-05-09T09:25:16.482581Z"
+}
+```
+
+```
 ./wrkb sis http://127.0.0.1:8080/subscribers/380671234567                                                                                               [23:05:20]
 
 Process "sis" starts with:
@@ -30,3 +42,4 @@ disk: 14 MB
 └────┴───────┴─────────┴─────┴────┴───────┘
 
 Best: 5, rps: 55940, latency: 92.03µs
+```
