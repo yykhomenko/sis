@@ -85,7 +85,7 @@ func (s *inMemStore) generate(ndc int) {
 
 				err := s.Set(ctx, info)
 				if err != nil {
-					log.Println("set info error:", err)
+					log.Println("set info error: {}", err.Error())
 				}
 			}
 		}()
