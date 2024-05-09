@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type Info struct {
+type Subscriber struct {
 	Msisdn       int64     `json:"msisdn"`
 	BillingType  int8      `json:"billing_type"`
 	LanguageType int8      `json:"language_type"`
@@ -15,8 +15,8 @@ type Info struct {
 }
 
 type Store interface {
-	Get(ctx context.Context, msisdn int64) (*Info, error)
-	Set(ctx context.Context, info *Info) error
+	Get(ctx context.Context, msisdn int64) (*Subscriber, error)
+	Set(ctx context.Context, info *Subscriber) error
 }
 
 func timeTrack(start time.Time, name string) {

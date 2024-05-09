@@ -43,8 +43,8 @@ func NewStorePG(config *Config) Store {
 	return store
 }
 
-func (s *pgStore) Get(ctx context.Context, msisdn int64) (*Info, error) {
-	var info Info
+func (s *pgStore) Get(ctx context.Context, msisdn int64) (*Subscriber, error) {
+	var info Subscriber
 	err := s.pool.QueryRow(ctx,
 		`SELECT 
   		 msisdn, 
@@ -68,7 +68,7 @@ func (s *pgStore) Get(ctx context.Context, msisdn int64) (*Info, error) {
 	return &info, err
 }
 
-func (s *pgStore) Set(ctx context.Context, info *Info) error {
+func (s *pgStore) Set(ctx context.Context, info *Subscriber) error {
 	_, err := s.pool.Exec(ctx,
 		`INSERT INTO 
        info(msisdn, billing_type, language_type, operator_type) 
@@ -122,7 +122,7 @@ func (s *pgStore) generate(ndc int) {
 			ctx := context.Background()
 			for number := range numbers {
 
-				info := &Info{
+				info := &Subscriber{
 					Msisdn:       int64(number + 380000000000),
 					BillingType:  int8(rand.Int31n(2)),
 					LanguageType: int8(rand.Int31n(2)),

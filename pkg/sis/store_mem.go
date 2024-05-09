@@ -13,13 +13,13 @@ import (
 type inMemStore struct {
 	config *Config
 	sync.RWMutex
-	infos map[int64]*Info
+	infos map[int64]*Subscriber
 }
 
 func NewStoreMem(config *Config) Store {
 	store := &inMemStore{
 		config: config,
-		infos:  make(map[int64]*Info, len(config.NDCS)*config.NDCCap),
+		infos:  make(map[int64]*Subscriber, len(config.NDCS)*config.NDCCap),
 	}
 
 	store.Generate()
@@ -27,7 +27,7 @@ func NewStoreMem(config *Config) Store {
 	return store
 }
 
-func (s *inMemStore) Get(ctx context.Context, msisdn int64) (*Info, error) {
+func (s *inMemStore) Get(ctx context.Context, msisdn int64) (*Subscriber, error) {
 	s.RLock()
 	info, exist := s.infos[msisdn]
 	s.RUnlock()
@@ -37,7 +37,7 @@ func (s *inMemStore) Get(ctx context.Context, msisdn int64) (*Info, error) {
 	return info, nil
 }
 
-func (s *inMemStore) Set(ctx context.Context, info *Info) error {
+func (s *inMemStore) Set(ctx context.Context, info *Subscriber) error {
 	info.ChangeDate = time.Now()
 	s.Lock()
 	s.infos[info.Msisdn] = info
@@ -75,7 +75,7 @@ func (s *inMemStore) generate(ndc int) {
 			ctx := context.Background()
 			for number := range numbers {
 
-				info := &Info{
+				info := &Subscriber{
 					Msisdn:       int64(number + 380000000000),
 					BillingType:  int8(rand.Int31n(2)),
 					LanguageType: int8(rand.Int31n(2)),

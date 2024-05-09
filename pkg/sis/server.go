@@ -39,7 +39,7 @@ func (s *Server) Start() {
 
 	app.Get("/", s.getRoot())
 	app.Get("/metrics", s.getMetrics())
-	app.Get("/subscribers/:msisdn", s.getHashes())
+	app.Get("/subscribers/:msisdn", s.getSubscriber())
 
 	log.Fatal(app.Listen(s.config.Addr))
 }
@@ -59,7 +59,7 @@ func (s *Server) getMetrics() func(c *fiber.Ctx) error {
 	}
 }
 
-func (s *Server) getHashes() func(c *fiber.Ctx) error {
+func (s *Server) getSubscriber() func(c *fiber.Ctx) error {
 	return func(c *fiber.Ctx) error {
 		atomic.AddUint64(&s.counter.subscribers, 1)
 		msisdn := c.Params("msisdn")
