@@ -1,4 +1,4 @@
-FROM golang:alpine as build-env
+FROM golang:alpine AS build-env
 RUN mkdir /main
 WORKDIR /main
 COPY go.mod .
