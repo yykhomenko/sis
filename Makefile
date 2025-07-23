@@ -24,6 +24,8 @@ bench: ## Run benchmarks
 	go test ./... -bench=. -benchmem
 
 clean: ## Clean project
+	make stop
+	rm -rf db/data/{*,.[\!]*} sftp/data/{*,.[\!]*}
 	find . -name '.DS_Store' -type f -delete
 
 image: ## Build image
