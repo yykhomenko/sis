@@ -1,4 +1,28 @@
 services:
+  db:
+    image: postgres:16.4-alpine
+    environment:
+      - POSTGRES_DB=${SIS_DB}
+      - POSTGRES_USER=${SIS_DB_USERNAME}
+      - POSTGRES_PASSWORD=${SIS_DB_PASSWORD}
+      - TZ=${TZ}
+    command: >
+      -c work_mem=1GB
+      -c max_wal_size=2GB
+    volumes:
+      - ./db/conf/:/var/lib/postgresql/conf/:ro
+      - ./db/conf/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./db/data/:/var/lib/postgresql/data/
+    ports:
+      - "5443:5432"
+    restart: unless-stopped
+    shm_size: 1g
+    healthcheck:
+      test: pg_isready -U sis
+      interval: 1s
+      timeout: 1s
+      retries: 300
+
   sis:
     image: yykhomenko/sis:latest
     env_file:
