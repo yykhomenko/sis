@@ -1,0 +1,8 @@
+services:
+  sis:
+    image: yykhomenko/sis:latest
+    env_file:
+      - ./.env
+    ports:
+      - "9001:8080"
+    restart: unless-stopped
