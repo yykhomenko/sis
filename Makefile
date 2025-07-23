@@ -25,7 +25,7 @@ bench: ## Run benchmarks
 
 clean: ## Clean project
 	make stop
-	rm -rf db/data/{*,.[\!]*} sftp/data/{*,.[\!]*}
+	rm -rf db/data/{*,.[\!]*}
 	find . -name '.DS_Store' -type f -delete
 
 image: ## Build image
