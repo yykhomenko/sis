@@ -23,28 +23,36 @@ test:	## Run tests
 bench: ## Run benchmarks
 	go test ./... -bench=. -benchmem
 
-build: ## Build version
-	go build ./cmd/${NAME}
-
-run: ## Build and start version
-	go run ./cmd/${NAME}
-
-start: ## Start version
-	./${NAME}
-
 clean: ## Clean project
-	rm -f ${NAME}
 	find . -name '.DS_Store' -type f -delete
 
 image: ## Build image
 	docker build -t ${TAG} -t ${LATEST} .
 
-pull: ## Pull image
-	docker pull ${LATEST}
-
 push: ## Push image
-	docker push ${VERSION} && \
+	docker push ${TAG} && \
 	docker push ${LATEST}
+
+pull: ## Pull images
+	docker compose pull
+
+build: ## Build containers
+	docker compose build
+
+start: ## Create and start containers
+	docker compose up -d
+
+stop: ## Stop and remove containers
+	docker compose down
+
+restart: ## Restart containers
+	make stop build start
+
+status: ## Print containers status
+	docker compose ps
+
+log: ## Print log
+	docker compose logs -f
 
 help:
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / \
