@@ -1,13 +1,15 @@
 package sis
 
 import (
-	"github.com/caarlos0/env/v11"
 	"log"
+
+	"github.com/caarlos0/env/v11"
 )
 
 type Config struct {
-	DbUrl        string `env:"SIS_DB_URL,required"`
-	Addr         string `env:"SIS_ADDR" envDefault:":8080"`
+	//DbUrl string `env:"SIS_DB_URL" envDefault:"postgresql://sis:EYTPu727BM2x3GY@localhost:5443/sis"`
+	DbUrl        string `env:"SIS_DB_URL" envDefault:"postgresql://sis:EYTPu727BM2x3GY@localhost:5432/sis"`
+	Addr         string `env:"SIS_ADDR" envDefault:":9001"`
 	CC           string `env:"SIS_CC" envDefault:"380"`
 	NDCS         []int  `env:"SIS_NDCS" envSeparator:"," envDefault:"67"`
 	NDCCap       int    `env:"SIS_NDC_CAPACITY" envDefault:"10000000"`

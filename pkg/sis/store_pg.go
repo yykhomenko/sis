@@ -2,12 +2,13 @@ package sis
 
 import (
 	"context"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"math/rand"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type pgStore struct {
@@ -21,6 +22,8 @@ func NewStorePG(config *Config) Store {
 	if err != nil {
 		log.Fatalf("unable to config pool: %v\n", err)
 	}
+
+	poolConfig.MaxConns = 64
 
 	pool, err := pgxpool.NewWithConfig(
 		context.Background(),
@@ -102,8 +105,8 @@ func (s *pgStore) Generate() {
 }
 
 func (s *pgStore) generate(ndc int) {
-	minNum := ndc*s.config.NDCCap + 0
-	maxNum := ndc*s.config.NDCCap + s.config.NDCCap - 1
+	minNum := ndc*10000000 + 0
+	maxNum := minNum + s.config.NDCCap - 1
 
 	var workers = runtime.GOMAXPROCS(-1)
 	numbers := make(chan int, 10*workers)
@@ -115,7 +118,7 @@ func (s *pgStore) generate(ndc int) {
 	}()
 
 	wg := &sync.WaitGroup{}
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 12; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -133,6 +136,10 @@ func (s *pgStore) generate(ndc int) {
 				err := s.Set(ctx, info)
 				if err != nil {
 					log.Println("set info error:", err)
+				}
+
+				if number%10000 == 0 {
+					log.Printf("generate subscriber: %d/%d\n", info.Msisdn, maxNum-minNum)
 				}
 			}
 		}()

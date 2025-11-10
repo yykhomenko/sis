@@ -56,6 +56,12 @@ status: ## Print containers status
 log: ## Print log
 	docker compose logs -f
 
+get_subscriber:
+	curl http://localhost:9001/subscribers/380670000001
+
+bench_sis:
+	~/src/go/wrkb/wrkb -p=sis http://127.0.0.1:9001/subscribers/__RANDI64_380670000001_380670099999__
+
 help:
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / \
   {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
