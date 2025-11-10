@@ -1,12 +1,12 @@
 package sis
 
 import (
-	"context"
 	"fmt"
-	"github.com/gofiber/fiber/v2"
 	"log"
 	"strconv"
 	"sync/atomic"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 type Server struct {
@@ -81,8 +81,7 @@ func (s *Server) getSubscriber() func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 2, ErrorMsg: "Not supported MSISDN format: " + msisdn})
 		}
 
-		ctx := context.Background()
-		info, err := s.store.Get(ctx, m)
+		info, err := s.store.Get(c.Context(), m)
 		if err != nil {
 			return c.Status(fiber.StatusNotFound).JSON(response{ErrorID: 1, ErrorMsg: "Not found"})
 		}
