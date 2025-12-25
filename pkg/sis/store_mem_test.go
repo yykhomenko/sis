@@ -8,7 +8,7 @@ import (
 )
 
 var testInfo = &Subscriber{
-	Msisdn:       0501234567,
+	Msisdn:       501234567,
 	BillingType:  1,
 	LanguageType: 2,
 	OperatorType: 1,
