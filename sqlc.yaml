@@ -7,3 +7,4 @@ sql:
       go:
         out: "internal/database"
         sql_package: "pgx/v5"
+        emit_prepared_queries: true
