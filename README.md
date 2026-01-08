@@ -13,7 +13,7 @@ profile data by MSISDN, backed by PostgreSQL (or an in-memory store for tests).
 
 ## API
 
-Base URL depends on `SIS_ADDR` (defaults to `:9001` in config, `:8080` in `.env`).
+Base URL depends on `SIS_ADDR` (defaults to `:9001` in config; `.env` overrides for Docker).
 
 ### `GET /subscribers/:msisdn`
 
@@ -46,7 +46,6 @@ Error IDs:
 - `2` Invalid MSISDN format
 - `3` Unsupported CC
 - `4` Unsupported NDC
-- `10` Internal
 
 ### `GET /`
 
@@ -85,7 +84,9 @@ make migration_up
 make migration_down
 ```
 
-SQLC config lives in `sqlc.yaml` with schema in `db/conf/init.sql` and queries in `sql/queries`. Generate code via:
+Docker Compose uses `db/conf/init.sql` on first init; keep it aligned with migrations.
+
+SQLC config lives in `sqlc.yaml` with schema in `sql/schema` and queries in `sql/queries`. Generated code goes to `internal/database`. Generate code via:
 
 ```bash
 make generate_database_code
@@ -102,7 +103,7 @@ make start
 Service ports:
 
 - PostgreSQL: `localhost:5443`
-- SIS API: `localhost:9001` (mapped to container `:8080`)
+- SIS API: `localhost:9001` (mapped to container port)
 
 ### Run Locally
 
@@ -132,7 +133,8 @@ make image
 ## Project Layout
 
 - `cmd/sis` main entry point
-- `pkg/sis` core logic, server, and stores
+- `internal/sis` core logic, server, and stores
+- `internal/database` SQLC-generated DB layer
 - `db/conf` database initialization
 - `docker-compose.yml` local stack
 
