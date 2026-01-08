@@ -62,6 +62,14 @@ get_subscriber:
 bench_sis:
 	~/src/go/wrkb/wrkb -p=sis http://127.0.0.1:9001/subscribers/__RANDI64_380670000001_380670099999__
 
+migration_up:
+	@cd sql/schema && \
+	goose postgres ${SIS_DB_URL} up
+
+migration_down:
+	@cd sql/schema && \
+	goose postgres ${SIS_DB_URL} down
+
 help:
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / \
   {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)

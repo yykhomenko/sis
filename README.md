@@ -93,6 +93,13 @@ create table sis.info (
 Note: Queries in `pkg/sis/store_pg.go` access `info` without schema.
 Ensure `search_path` includes `sis` or update queries to `sis.info`.
 
+Migrations are managed with Goose in `sql/schema`. Use:
+
+```bash
+make migration_up
+make migration_down
+```
+
 ## Local Development
 
 ### Docker Compose
