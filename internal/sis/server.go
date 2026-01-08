@@ -1,6 +1,8 @@
 package sis
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -81,12 +83,15 @@ func (s *Server) getSubscriber() func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 2, ErrorMsg: "Not supported MSISDN format: " + msisdn})
 		}
 
-		info, err := s.store.Get(c.Context(), m)
-		if err != nil {
+		subscriber, err := s.store.Get(c.Context(), m)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
 			return c.Status(fiber.StatusNotFound).JSON(response{ErrorID: 1, ErrorMsg: "Not found"})
+		case err != nil:
+			return c.Status(fiber.StatusInternalServerError).JSON(response{ErrorID: 10, ErrorMsg: "InternalServerError DB"})
 		}
 
-		return c.Status(fiber.StatusOK).JSON(info)
+		return c.Status(fiber.StatusOK).JSON(subscriber)
 	}
 }
 

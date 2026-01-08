@@ -8,12 +8,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/yykhomenko/sis/internal/database"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type pgStore struct {
-	config *Config
-	pool   *pgxpool.Pool
+	config  *Config
+	pool    *pgxpool.Pool
+	queries *database.Queries
 }
 
 func NewStorePG(config *Config) Store {
@@ -39,7 +42,11 @@ func NewStorePG(config *Config) Store {
 		pool.Config().ConnConfig.Database,
 	)
 
-	store := &pgStore{config: config, pool: pool}
+	store := &pgStore{
+		config:  config,
+		pool:    pool,
+		queries: database.New(pool),
+	}
 
 	//store.Generate()
 
@@ -47,48 +54,26 @@ func NewStorePG(config *Config) Store {
 }
 
 func (s *pgStore) Get(ctx context.Context, msisdn int64) (*Subscriber, error) {
-	var info Subscriber
-	err := s.pool.QueryRow(ctx,
-		`SELECT 
-  		 msisdn, 
-  		 billing_type, 
-  		 language_type, 
-  		 operator_type, 
-  		 change_date 
-     FROM 
-       info 
-     WHERE 
-       msisdn = $1`,
-		msisdn,
-	).
-		Scan(
-			&info.Msisdn,
-			&info.BillingType,
-			&info.LanguageType,
-			&info.OperatorType,
-			&info.ChangeDate,
-		)
-	return &info, err
+	row, err := s.queries.GetSubscriber(ctx, msisdn)
+	if err != nil {
+		return nil, err
+	}
+	return &Subscriber{
+		Msisdn:       row.Msisdn,
+		UpdatedAt:    row.UpdatedAt.Time,
+		BillingType:  row.BillingType,
+		LanguageType: row.LanguageType,
+		OperatorType: row.OperatorType,
+	}, nil
 }
 
-func (s *pgStore) Set(ctx context.Context, info *Subscriber) error {
-	_, err := s.pool.Exec(ctx,
-		`INSERT INTO 
-       info(msisdn, billing_type, language_type, operator_type) 
-		 VALUES($1, $2, $3, $4) 
-		 ON CONFLICT (msisdn) DO 
-		 UPDATE 
-		   SET 
-		     billing_type = excluded.billing_type, 
-		     language_type = excluded.language_type, 
-		     operator_type = excluded.operator_type, 
-		     change_date = now()`,
-		info.Msisdn,
-		info.BillingType,
-		info.LanguageType,
-		info.OperatorType,
-	)
-	return err
+func (s *pgStore) Set(ctx context.Context, subscriber *Subscriber) error {
+	return s.queries.UpdateSubscriber(ctx, database.UpdateSubscriberParams{
+		Msisdn:       subscriber.Msisdn,
+		BillingType:  subscriber.BillingType,
+		LanguageType: subscriber.LanguageType,
+		OperatorType: subscriber.OperatorType,
+	})
 }
 
 func (s *pgStore) close() {
@@ -125,21 +110,21 @@ func (s *pgStore) generate(ndc int) {
 			ctx := context.Background()
 			for number := range numbers {
 
-				info := &Subscriber{
+				subscriber := &Subscriber{
 					Msisdn:       int64(number + 380000000000),
-					BillingType:  int8(rand.Int31n(2)),
-					LanguageType: int8(rand.Int31n(2)),
-					OperatorType: int8(rand.Int31n(2)),
-					ChangeDate:   time.Now(),
+					BillingType:  int16(rand.Int31n(2)),
+					LanguageType: int16(rand.Int31n(2)),
+					OperatorType: int16(rand.Int31n(2)),
+					UpdatedAt:    time.Now(),
 				}
 
-				err := s.Set(ctx, info)
+				err := s.Set(ctx, subscriber)
 				if err != nil {
-					log.Println("set info error:", err)
+					log.Println("set subscriber error:", err)
 				}
 
 				if number%10000 == 0 {
-					log.Printf("generate subscriber: %d/%d\n", info.Msisdn, maxNum-minNum)
+					log.Printf("generate subscriber: %d/%d\n", subscriber.Msisdn, maxNum-minNum)
 				}
 			}
 		}()

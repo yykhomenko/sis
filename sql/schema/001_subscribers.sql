@@ -1,13 +1,11 @@
 -- +goose Up
-create schema if not exists sis;
-create table if not exists sis.subscribers (
+create table if not exists subscribers (
 	msisdn        bigint primary key,
-	billing_type  smallint,
-	language_type smallint,
-	operator_type smallint,
-	change_date   timestamp default now()
+	updated_at    timestamp not null default now(),
+	billing_type  smallint  not null,
+	language_type smallint  not null,
+	operator_type smallint  not null
 );
 
 -- +goose Down
-drop table if exists sis.subscribers;
-drop schema if exists sis;
+drop table if exists subscribers;

@@ -11,15 +11,15 @@ import (
 )
 
 type inMemStore struct {
-	config *Config
+	config      *Config
+	subscribers map[int64]*Subscriber
 	sync.RWMutex
-	infos map[int64]*Subscriber
 }
 
 func NewStoreMem(config *Config) Store {
 	store := &inMemStore{
-		config: config,
-		infos:  make(map[int64]*Subscriber, len(config.NDCS)*config.NDCCap),
+		config:      config,
+		subscribers: make(map[int64]*Subscriber, len(config.NDCS)*config.NDCCap),
 	}
 
 	store.Generate()
@@ -29,18 +29,18 @@ func NewStoreMem(config *Config) Store {
 
 func (s *inMemStore) Get(ctx context.Context, msisdn int64) (*Subscriber, error) {
 	s.RLock()
-	info, exist := s.infos[msisdn]
+	subscriber, exist := s.subscribers[msisdn]
 	s.RUnlock()
 	if !exist {
-		return nil, errors.New("info not exist")
+		return nil, errors.New("subscriber not exist")
 	}
-	return info, nil
+	return subscriber, nil
 }
 
-func (s *inMemStore) Set(ctx context.Context, info *Subscriber) error {
-	info.ChangeDate = time.Now()
+func (s *inMemStore) Set(ctx context.Context, subscriber *Subscriber) error {
+	subscriber.UpdatedAt = time.Now()
 	s.Lock()
-	s.infos[info.Msisdn] = info
+	s.subscribers[subscriber.Msisdn] = subscriber
 	s.Unlock()
 	return nil
 }
@@ -75,17 +75,17 @@ func (s *inMemStore) generate(ndc int) {
 			ctx := context.Background()
 			for number := range numbers {
 
-				info := &Subscriber{
+				subscriber := &Subscriber{
 					Msisdn:       int64(number + 380000000000),
-					BillingType:  int8(rand.Int31n(2)),
-					LanguageType: int8(rand.Int31n(2)),
-					OperatorType: int8(rand.Int31n(2)),
-					ChangeDate:   time.Now(),
+					BillingType:  int16(rand.Int31n(2)),
+					LanguageType: int16(rand.Int31n(2)),
+					OperatorType: int16(rand.Int31n(2)),
+					UpdatedAt:    time.Now(),
 				}
 
-				err := s.Set(ctx, info)
+				err := s.Set(ctx, subscriber)
 				if err != nil {
-					log.Println("set info error: {}", err.Error())
+					log.Println("set subscriber error: {}", err.Error())
 				}
 			}
 		}()

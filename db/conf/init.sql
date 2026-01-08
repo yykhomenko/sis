@@ -1,11 +1,11 @@
 \echo CREATE SCHEMA sis;
 create schema sis;
 
-\echo CREATE TABLE info;
-create table sis.info (
+\echo CREATE TABLE subscribers;
+create table sis.subscribers (
 	msisdn        bigint primary key,
-	billing_type  smallint,
-	language_type smallint,
-	operator_type smallint,
-	change_date   timestamp default now()
+	created_at    timestamp not null default now(),
+	billing_type  smallint  not null,
+	language_type smallint  not null,
+	operator_type smallint  not null
 )

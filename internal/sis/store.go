@@ -8,15 +8,15 @@ import (
 
 type Subscriber struct {
 	Msisdn       int64     `json:"msisdn"`
-	BillingType  int8      `json:"billing_type"`
-	LanguageType int8      `json:"language_type"`
-	OperatorType int8      `json:"operator_type"`
-	ChangeDate   time.Time `json:"change_date"`
+	BillingType  int16     `json:"billing_type"`
+	LanguageType int16     `json:"language_type"`
+	OperatorType int16     `json:"operator_type"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type Store interface {
 	Get(ctx context.Context, msisdn int64) (*Subscriber, error)
-	Set(ctx context.Context, info *Subscriber) error
+	Set(ctx context.Context, subscriber *Subscriber) error
 }
 
 func timeTrack(start time.Time, name string) {

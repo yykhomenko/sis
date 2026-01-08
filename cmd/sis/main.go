@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/yykhomenko/sis/pkg/sis"
+	"github.com/yykhomenko/sis/internal/sis"
 	"log"
 )
 
