@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sis-config
+
+data:
+  SIS_ADDR: ":8080"
+  SIS_CC: "380"
+  SIS_NDCS: "67"
+  SIS_NDC_CAPACITY: "10000000"
+  SIS_MSISDN_LENGTH: "12"
+  TZ: "Europe/Prague"
