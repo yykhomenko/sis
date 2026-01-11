@@ -121,7 +121,7 @@ func (s *pgStore) generate(cc int, ndc int, capacity int) {
 		for number := minNum; number <= maxNum; number++ {
 			numbers <- number
 			if number%(capacity/100) == 0 || number == maxNum {
-				elapsed := time.Now().Sub(start).Seconds()
+				elapsed := time.Since(start).Seconds()
 				processed := number - minNum
 				remain := maxNum - number
 				tps := float64(processed) / elapsed
