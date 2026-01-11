@@ -3,8 +3,10 @@ package sis
 import (
 	"context"
 	"log"
+	"math"
 	"math/rand"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 
@@ -48,7 +50,9 @@ func NewStorePG(config *Config) Store {
 		queries: database.New(pool),
 	}
 
-	//store.Generate()
+	if config.Generate {
+		store.Generate()
+	}
 
 	return store
 }
@@ -84,50 +88,76 @@ func (s *pgStore) Generate() {
 	log.Printf("generate %d subscribers...", len(s.config.NDCS)*s.config.NDCCap)
 	defer timeTrack(time.Now(), "generate")
 
+	cc, err := strconv.Atoi(s.config.CC)
+	if err != nil {
+		log.Fatalf("unable to parse CC, convert %s to int: %v\n", s.config.CC, err)
+	}
+
+	capacity := s.config.NDCCap
+
 	for _, ndc := range s.config.NDCS {
-		s.generate(ndc)
+		log.Printf("NDC: %d", ndc)
+		s.generate(cc, ndc, capacity)
 	}
 }
 
-func (s *pgStore) generate(ndc int) {
-	minNum := ndc*10000000 + 0
-	maxNum := minNum + s.config.NDCCap - 1
+func (s *pgStore) generate(cc int, ndc int, capacity int) {
 
-	var workers = runtime.GOMAXPROCS(-1)
-	numbers := make(chan int, 10*workers)
+	subscriberDigits := int(math.Log10(float64(capacity-1))) + 1
+	ndcShift := int(math.Pow10(subscriberDigits))
+
+	ndcDigits := int(math.Log10(float64(ndc))) + 1
+	ccShift := int(math.Pow10(ndcDigits + subscriberDigits))
+
+	minNum := cc*ccShift + ndc*ndcShift
+	maxNum := minNum + capacity - 1
+
+	var numWorkers = runtime.NumCPU()
+
+	numbers := make(chan int, 1000*numWorkers)
 	go func() {
 		defer close(numbers)
+		start := time.Now()
 		for number := minNum; number <= maxNum; number++ {
 			numbers <- number
+			if number%(capacity/100) == 0 || number == maxNum {
+				elapsed := time.Now().Sub(start).Seconds()
+				processed := number - minNum
+				remain := maxNum - number
+				tps := float64(processed) / elapsed
+
+				remainTime := time.Duration(float64(remain)/tps) * time.Second
+
+				log.Printf("generate subscriber: %d/%d tps: %.0f remain: %v\n", number, maxNum-minNum+1, tps, remainTime)
+			}
 		}
 	}()
 
 	wg := &sync.WaitGroup{}
-	for i := 0; i < 12; i++ {
+	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
-		go func() {
+		go func(numbers <-chan int) {
 			defer wg.Done()
+
 			ctx := context.Background()
 			for number := range numbers {
 
 				subscriber := &Subscriber{
-					Msisdn:       int64(number + 380000000000),
+					Msisdn:       int64(number),
 					BillingType:  int16(rand.Int31n(2)),
 					LanguageType: int16(rand.Int31n(2)),
 					OperatorType: int16(rand.Int31n(2)),
 					UpdatedAt:    time.Now(),
 				}
 
+				//subscriber = subscriber
+
 				err := s.Set(ctx, subscriber)
 				if err != nil {
 					log.Println("set subscriber error:", err)
 				}
-
-				if number%10000 == 0 {
-					log.Printf("generate subscriber: %d/%d\n", subscriber.Msisdn, maxNum-minNum)
-				}
 			}
-		}()
+		}(numbers)
 	}
 	wg.Wait()
 }

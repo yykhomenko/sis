@@ -2,6 +2,8 @@ package sis
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -54,4 +56,22 @@ func BenchmarkStore_Set(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = store.Set(ctx, testSubscriber)
 	}
+}
+
+func Test_my(b *testing.T) {
+	generate(380, 67, 1_000)
+}
+
+func generate(cc int, ndc int, cap int) {
+
+	subscriberDigits := int(math.Log10(float64(cap-1))) + 1
+	ndcShift := int(math.Pow10(subscriberDigits))
+
+	ndcDigits := int(math.Log10(float64(ndc))) + 1
+	ccShift := int(math.Pow10(ndcDigits + subscriberDigits))
+
+	minNum := cc*ccShift + ndc*ndcShift
+	maxNum := minNum + cap - 1
+
+	fmt.Println(minNum, maxNum)
 }
