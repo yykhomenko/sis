@@ -47,6 +47,22 @@ Error IDs:
 - `3` Unsupported CC
 - `4` Unsupported NDC
 
+### `PUT /subscribers/:msisdn`
+
+Upserts subscriber profile data.
+
+Request body:
+
+```json
+{
+  "billing_type": 2,
+  "language_type": 1,
+  "operator_type": 0
+}
+```
+
+Response payload mirrors `GET /subscribers/:msisdn`.
+
 ### `GET /`
 
 Health check, returns `200 OK`.

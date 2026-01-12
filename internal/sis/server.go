@@ -42,6 +42,7 @@ func (s *Server) Start() {
 	app.Get("/", s.getRoot())
 	app.Get("/metrics", s.getMetrics())
 	app.Get("/subscribers/:msisdn", s.getSubscriber())
+	app.Put("/subscribers/:msisdn", s.putSubscriber())
 
 	log.Fatal(app.Listen(s.config.Addr))
 }
@@ -92,6 +93,52 @@ func (s *Server) getSubscriber() func(c *fiber.Ctx) error {
 		}
 
 		return c.Status(fiber.StatusOK).JSON(subscriber)
+	}
+}
+
+func (s *Server) putSubscriber() func(c *fiber.Ctx) error {
+	return func(c *fiber.Ctx) error {
+		msisdn := c.Params("msisdn")
+
+		if !validateMsisdnLen(msisdn, s.config.MsisdnLength) {
+			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 2, ErrorMsg: "Not supported MSISDN format: " + msisdn})
+		}
+
+		if cc, ok := validateCC(msisdn, s.config.CC); !ok {
+			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 3, ErrorMsg: "Not supported CC: " + cc})
+		}
+
+		if ndc, ok := validateNDC(msisdn, s.config.NDCS); !ok {
+			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 4, ErrorMsg: "Not supported NDC: " + ndc})
+		}
+
+		m, err := strconv.ParseInt(msisdn, 10, 64)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 2, ErrorMsg: "Not supported MSISDN format: " + msisdn})
+		}
+
+		req := struct {
+			BillingType  int16 `json:"billing_type"`
+			LanguageType int16 `json:"language_type"`
+			OperatorType int16 `json:"operator_type"`
+		}{}
+
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 2, ErrorMsg: "Invalid request body, err: " + err.Error()})
+		}
+
+		subscriber := &Subscriber{
+			Msisdn:       m,
+			BillingType:  req.BillingType,
+			LanguageType: req.LanguageType,
+			OperatorType: req.OperatorType,
+		}
+
+		if err := s.store.Set(c.Context(), subscriber); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(response{ErrorID: 10, ErrorMsg: "InternalServerError DB"})
+		}
+
+		return c.SendStatus(fiber.StatusOK)
 	}
 }
 
