@@ -150,8 +150,6 @@ func (s *pgStore) generate(cc int, ndc int, capacity int) {
 					UpdatedAt:    time.Now(),
 				}
 
-				//subscriber = subscriber
-
 				err := s.Set(ctx, subscriber)
 				if err != nil {
 					log.Println("set subscriber error:", err)

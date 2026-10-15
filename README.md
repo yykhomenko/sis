@@ -156,9 +156,9 @@ make image
 
 ## Bench
 ```
-~/src/go/wrkb/wrkb -p=main http://127.0.0.1:9001/subscribers/__RANDI64_380670000001_380670099999__
-false
-⚙️  Preparing benchmark: 'main' [GET] for http://127.0.0.1:9001/subscribers/__RANDI64_380670000001_380670099999__
+~/src/go/wrkb/wrkb -p=main http://127.0.0.1:9001/subscribers/__RANDI64_380670000001_380679999999__
+
+⚙️  Preparing benchmark: 'main' [GET] for http://127.0.0.1:9001/subscribers/__RANDI64_380670000001_380679999999__
    Connections: [1 2 4 8 16 32 64 128 256] | Duration: 1s | Verbose: false
 
 ⚙️  Process: main

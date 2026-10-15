@@ -60,10 +60,10 @@ log: ## Print log
 	docker compose logs -f
 
 get_subscriber:
-	curl http://localhost:9001/subscribers/380670000000
+	curl http://localhost:9001/subscribers/380670000001
 
 bench_sis:
-	~/src/go/wrkb/wrkb -p=main http://127.0.0.1:9001/subscribers/__RANDI64_380670000001_380670099999__
+	~/src/go/wrkb/wrkb -p=sis http://127.0.0.1:9001/subscribers/__RANDI64_380670000001_380670099999__
 
 migration_up:
 	@cd sql/schema && \
