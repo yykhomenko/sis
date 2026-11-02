@@ -4,32 +4,33 @@ REPO   := ${ORG}/${NAME}
 TAG    := ${REPO}:$(shell date '+%y%m%d')-$(shell git log -1 --pretty=format:'%h')
 LATEST := ${REPO}:latest
 
-include .env
+-include .env
 export
 
 update: ## Update dependencies
 	go get -u ./...
 	go mod tidy
 
-lint: ## Run linters
-	golangci-lint run --no-config --issues-exit-code=0 --timeout=10m \
-    --disable-all --enable=deadcode  --enable=gocyclo --enable=revive --enable=varcheck \
-    --enable=structcheck --enable=maligned --enable=errcheck --enable=dupl --enable=ineffassign \
-    --enable=interfacer --enable=unconvert --enable=goconst --enable=gosec --enable=megacheck
+lint: ## Run linters (golangci-lint v2, config in .golangci.yml)
+	golangci-lint run ./...
+
+vet: ## Run go vet
+	go vet ./...
 
 test:	## Run tests
-	go test -race -timeout 30s ./...
+	go test -race -timeout 60s ./...
 
 bench: ## Run benchmarks
 	go test ./... -bench=. -benchmem
 
 build_exec:
-	go build -o sis cmd/sis/main.go
+	go build -o sis ./cmd/sis
 
 run:
 	make build_exec && ./sis
 
-clean: ## Clean project
+clean: ## Clean project (removes local database data!)
+	@read -p "This deletes all data in db/data. Continue? [y/N] " ans && [ "$$ans" = y ]
 	make stop
 	rm -rf db/data/{*,.[\!]*}
 	find . -name '.DS_Store' -type f -delete
