@@ -1,7 +1,6 @@
 package sis
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -99,9 +98,10 @@ func (s *Server) getSubscriber() func(c *fiber.Ctx) error {
 
 		subscriber, err := s.store.Get(c.Context(), m)
 		switch {
-		case errors.Is(err, sql.ErrNoRows):
+		case errors.Is(err, ErrNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(response{ErrorID: 1, ErrorMsg: "Not found"})
 		case err != nil:
+			log.Printf("get subscriber %d: %v\n", m, err)
 			return c.Status(fiber.StatusInternalServerError).JSON(response{ErrorID: 10, ErrorMsg: "InternalServerError DB"})
 		}
 
@@ -148,6 +148,7 @@ func (s *Server) putSubscriber() func(c *fiber.Ctx) error {
 		}
 
 		if err := s.store.Set(c.Context(), subscriber); err != nil {
+			log.Printf("set subscriber %d: %v\n", m, err)
 			return c.Status(fiber.StatusInternalServerError).JSON(response{ErrorID: 10, ErrorMsg: "InternalServerError DB"})
 		}
 

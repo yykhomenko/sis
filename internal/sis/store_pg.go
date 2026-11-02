@@ -2,16 +2,16 @@ package sis
 
 import (
 	"context"
+	"errors"
 	"log"
-	"math"
 	"math/rand"
 	"runtime"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/yykhomenko/sis/internal/database"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -59,6 +59,9 @@ func NewStorePG(config *Config) Store {
 
 func (s *pgStore) Get(ctx context.Context, msisdn int64) (*Subscriber, error) {
 	row, err := s.queries.GetSubscriber(ctx, msisdn)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -88,29 +91,18 @@ func (s *pgStore) Generate() {
 	log.Printf("generate %d subscribers...", len(s.config.NDCS)*s.config.NDCCap)
 	defer timeTrack(time.Now(), "generate")
 
-	cc, err := strconv.Atoi(s.config.CC)
-	if err != nil {
-		log.Fatalf("unable to parse CC, convert %s to int: %v\n", s.config.CC, err)
-	}
-
-	capacity := s.config.NDCCap
-
 	for _, ndc := range s.config.NDCS {
 		log.Printf("NDC: %d", ndc)
-		s.generate(cc, ndc, capacity)
+		s.generate(ndc)
 	}
 }
 
-func (s *pgStore) generate(cc int, ndc int, capacity int) {
-
-	subscriberDigits := int(math.Log10(float64(capacity-1))) + 1
-	ndcShift := int(math.Pow10(subscriberDigits))
-
-	ndcDigits := int(math.Log10(float64(ndc))) + 1
-	ccShift := int(math.Pow10(ndcDigits + subscriberDigits))
-
-	minNum := cc*ccShift + ndc*ndcShift
-	maxNum := minNum + capacity - 1
+func (s *pgStore) generate(ndc int) {
+	capacity := s.config.NDCCap
+	minNum, maxNum, err := msisdnRange(s.config.CC, ndc, capacity, s.config.MsisdnLength)
+	if err != nil {
+		log.Fatalf("unable to generate subscribers: %v\n", err)
+	}
 
 	var numWorkers = runtime.NumCPU()
 

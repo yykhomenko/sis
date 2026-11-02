@@ -27,6 +27,11 @@ services:
     image: yykhomenko/sis:latest
     env_file:
       - ./.env
+    environment:
+      - SIS_DB_URL=postgresql://${SIS_DB_USERNAME}:${SIS_DB_PASSWORD}@db:5432/${SIS_DB}?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "9001:8080"
     restart: unless-stopped

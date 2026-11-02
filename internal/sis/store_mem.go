@@ -2,7 +2,6 @@ package sis
 
 import (
 	"context"
-	"errors"
 	"log"
 	"math/rand"
 	"runtime"
@@ -34,7 +33,7 @@ func (s *inMemStore) Get(ctx context.Context, msisdn int64) (*Subscriber, error)
 	subscriber, exist := s.subscribers[msisdn]
 	s.RUnlock()
 	if !exist {
-		return nil, errors.New("subscriber not exist")
+		return nil, ErrNotFound
 	}
 	return subscriber, nil
 }
@@ -57,8 +56,10 @@ func (s *inMemStore) Generate() {
 }
 
 func (s *inMemStore) generate(ndc int) {
-	minNum := ndc*s.config.NDCCap + 0
-	maxNum := ndc*s.config.NDCCap + s.config.NDCCap - 1
+	minNum, maxNum, err := msisdnRange(s.config.CC, ndc, s.config.NDCCap, s.config.MsisdnLength)
+	if err != nil {
+		log.Fatalf("unable to generate subscribers: %v\n", err)
+	}
 
 	var workers = runtime.GOMAXPROCS(-1)
 	numbers := make(chan int, 10*workers)
@@ -78,7 +79,7 @@ func (s *inMemStore) generate(ndc int) {
 			for number := range numbers {
 
 				subscriber := &Subscriber{
-					Msisdn:       int64(number + 380000000000),
+					Msisdn:       int64(number),
 					BillingType:  int16(rand.Int31n(2)),
 					LanguageType: int16(rand.Int31n(2)),
 					OperatorType: int16(rand.Int31n(2)),
@@ -87,7 +88,7 @@ func (s *inMemStore) generate(ndc int) {
 
 				err := s.Set(ctx, subscriber)
 				if err != nil {
-					log.Println("set subscriber error: {}", err.Error())
+					log.Println("set subscriber error:", err)
 				}
 			}
 		}()
