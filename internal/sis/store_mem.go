@@ -27,6 +27,8 @@ func NewStoreMem(config *Config) Store {
 	return store
 }
 
+func (s *inMemStore) Close() {}
+
 func (s *inMemStore) Get(ctx context.Context, msisdn int64) (*Subscriber, error) {
 	s.RLock()
 	subscriber, exist := s.subscribers[msisdn]

@@ -80,7 +80,7 @@ func (s *pgStore) Set(ctx context.Context, subscriber *Subscriber) error {
 	})
 }
 
-func (s *pgStore) close() {
+func (s *pgStore) Close() {
 	s.pool.Close()
 }
 

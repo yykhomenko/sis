@@ -17,6 +17,7 @@ type Subscriber struct {
 type Store interface {
 	Get(ctx context.Context, msisdn int64) (*Subscriber, error)
 	Set(ctx context.Context, subscriber *Subscriber) error
+	Close()
 }
 
 func timeTrack(start time.Time, name string) {

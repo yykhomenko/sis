@@ -26,6 +26,9 @@ bench: ## Run benchmarks
 build_exec:
 	go build -o sis cmd/sis/main.go
 
+run:
+	make build_exec && ./sis
+
 clean: ## Clean project
 	make stop
 	rm -rf db/data/{*,.[\!]*}

@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -15,6 +16,7 @@ type Server struct {
 	config  *Config
 	store   Store
 	counter *counter
+	app     *fiber.App
 }
 
 type counter struct {
@@ -28,23 +30,34 @@ type response struct {
 }
 
 func NewServer(c *Config, s Store) *Server {
-	return &Server{
+	server := &Server{
 		config:  c,
 		store:   s,
 		counter: &counter{},
+		app:     fiber.New(fiber.Config{DisableStartupMessage: true}),
 	}
+
+	server.app.Get("/", server.getRoot())
+	server.app.Get("/metrics", server.getMetrics())
+	server.app.Get("/subscribers/:msisdn", server.getSubscriber())
+	server.app.Put("/subscribers/:msisdn", server.putSubscriber())
+
+	return server
 }
 
-func (s *Server) Start() {
+func (s *Server) Start() error {
 	log.Printf("http-server listening (%s)...\n", s.config.Addr)
-	app := fiber.New(fiber.Config{DisableStartupMessage: true})
+	return s.app.Listen(s.config.Addr)
+}
 
-	app.Get("/", s.getRoot())
-	app.Get("/metrics", s.getMetrics())
-	app.Get("/subscribers/:msisdn", s.getSubscriber())
-	app.Put("/subscribers/:msisdn", s.putSubscriber())
-
-	log.Fatal(app.Listen(s.config.Addr))
+func (s *Server) Stop() error {
+	log.Printf("http-server stopping...\n")
+	if err := s.app.ShutdownWithTimeout(5 * time.Second); err != nil {
+		log.Printf("http-server shutdown error: %v\n", err)
+		return err
+	}
+	log.Printf("http-server stopped\n")
+	return nil
 }
 
 func (s *Server) getRoot() func(c *fiber.Ctx) error {
