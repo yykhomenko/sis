@@ -24,6 +24,7 @@ type Subscriber struct {
 type Store interface {
 	Get(ctx context.Context, msisdn int64) (*Subscriber, error)
 	Set(ctx context.Context, subscriber *Subscriber) error
+	Ping(ctx context.Context) error
 	Close()
 }
 

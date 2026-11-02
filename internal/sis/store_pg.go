@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	pgMaxConns        = 64
 	pgStartupTimeout  = 5 * time.Second
 	generateBatchSize = 100_000
 )
@@ -30,12 +29,12 @@ type pgStore struct {
 }
 
 func NewStorePG(config *Config) Store {
-	poolConfig, err := pgxpool.ParseConfig(config.DbUrl)
+	poolConfig, err := pgxpool.ParseConfig(config.DbURL)
 	if err != nil {
 		log.Fatalf("unable to config pool: %v\n", err)
 	}
 
-	poolConfig.MaxConns = pgMaxConns
+	poolConfig.MaxConns = config.DbMaxConns
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
 	if err != nil {
@@ -106,6 +105,10 @@ func (s *pgStore) Set(ctx context.Context, subscriber *Subscriber) error {
 	})
 }
 
+func (s *pgStore) Ping(ctx context.Context) error {
+	return s.pool.Ping(ctx)
+}
+
 func (s *pgStore) Close() {
 	s.pool.Close()
 }
@@ -161,7 +164,7 @@ func (s *pgStore) generate(ctx context.Context, ndc int) error {
 		start    = time.Now()
 	)
 
-	workers := min(runtime.NumCPU(), pgMaxConns/2)
+	workers := max(1, min(runtime.NumCPU(), int(s.config.DbMaxConns)/2))
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
 		go func() {
@@ -207,9 +210,9 @@ func (s *pgStore) copyBatch(ctx context.Context, batch numberRange) error {
 	rows := pgx.CopyFromSlice(n, func(i int) ([]any, error) {
 		return []any{
 			int64(batch.from + i),
-			int16(rand.Int31n(2)),
-			int16(rand.Int31n(2)),
-			int16(rand.Int31n(2)),
+			rand.N(int16(2)),
+			rand.N(int16(2)),
+			rand.N(int16(2)),
 		}, nil
 	})
 

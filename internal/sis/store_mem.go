@@ -3,7 +3,7 @@ package sis
 import (
 	"context"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"runtime"
 	"sync"
 	"time"
@@ -28,7 +28,9 @@ func NewStoreMem(config *Config) Store {
 
 func (s *inMemStore) Close() {}
 
-func (s *inMemStore) Get(ctx context.Context, msisdn int64) (*Subscriber, error) {
+func (s *inMemStore) Ping(_ context.Context) error { return nil }
+
+func (s *inMemStore) Get(_ context.Context, msisdn int64) (*Subscriber, error) {
 	s.RLock()
 	subscriber, exist := s.subscribers[msisdn]
 	s.RUnlock()
@@ -38,7 +40,7 @@ func (s *inMemStore) Get(ctx context.Context, msisdn int64) (*Subscriber, error)
 	return subscriber, nil
 }
 
-func (s *inMemStore) Set(ctx context.Context, subscriber *Subscriber) error {
+func (s *inMemStore) Set(_ context.Context, subscriber *Subscriber) error {
 	subscriber.UpdatedAt = time.Now()
 	s.Lock()
 	s.subscribers[subscriber.Msisdn] = subscriber
@@ -80,9 +82,9 @@ func (s *inMemStore) generate(ndc int) {
 
 				subscriber := &Subscriber{
 					Msisdn:       int64(number),
-					BillingType:  int16(rand.Int31n(2)),
-					LanguageType: int16(rand.Int31n(2)),
-					OperatorType: int16(rand.Int31n(2)),
+					BillingType:  rand.N(int16(2)),
+					LanguageType: rand.N(int16(2)),
+					OperatorType: rand.N(int16(2)),
 					UpdatedAt:    time.Now(),
 				}
 

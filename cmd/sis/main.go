@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	_ "time/tzdata" // embed time zones: the scratch image has none, so TZ would be ignored
 
 	"github.com/yykhomenko/sis/internal/sis"
 )

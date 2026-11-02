@@ -1,4 +1,4 @@
-FROM golang:alpine AS build-env
+FROM golang:1.26-alpine AS build-env
 ARG TARGETOS=linux
 ARG TARGETARCH
 WORKDIR /src
@@ -9,4 +9,6 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -trimpath -ldfl
 
 FROM scratch
 COPY --from=build-env /out/sis /sis
+USER 65534:65534
+EXPOSE 8080
 ENTRYPOINT ["/sis"]

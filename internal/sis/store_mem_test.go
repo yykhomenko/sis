@@ -3,6 +3,7 @@ package sis
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -22,6 +23,8 @@ func newTestConfig() *Config {
 		NDCS:         []int{67},
 		NDCCap:       1000,
 		MsisdnLength: 12,
+		DbMaxConns:   4,
+		DbTimeout:    time.Second,
 	}
 }
 
