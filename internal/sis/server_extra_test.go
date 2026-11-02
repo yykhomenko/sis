@@ -88,7 +88,6 @@ func TestServerReadyAndMetrics(t *testing.T) {
 		`sis_request_duration_seconds_count{code="200",method="GET"} 2`,
 		`sis_store_duration_seconds_count{op="get",result="ok"} 2`,
 		`sis_store_duration_seconds_count{op="get",result="not_found"} 1`,
-		"subscribers_total 4",
 		"go_goroutines",
 	} {
 		assert.Contains(t, body, want)

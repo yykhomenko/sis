@@ -21,7 +21,6 @@ type metrics struct {
 	requests        *prometheus.CounterVec
 	requestDuration *prometheus.HistogramVec
 	storeDuration   *prometheus.HistogramVec
-	legacyGets      prometheus.Counter
 }
 
 // collectorProvider is implemented by stores that expose their own metrics
@@ -47,17 +46,12 @@ func newMetrics(store Store) *metrics {
 			Help:    "Duration of store calls (for PostgreSQL: pool acquire + query).",
 			Buckets: latencyBuckets,
 		}, []string{"op", "result"}),
-		legacyGets: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "subscribers_total",
-			Help: `Deprecated: use sis_requests_total{method="GET"}.`,
-		}),
 	}
 
 	m.registry.MustRegister(
 		m.requests,
 		m.requestDuration,
 		m.storeDuration,
-		m.legacyGets,
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
@@ -73,9 +67,6 @@ func (m *metrics) observeRequest(method string, code int, d time.Duration) {
 	codeStr := strconv.Itoa(code)
 	m.requests.WithLabelValues(method, codeStr).Inc()
 	m.requestDuration.WithLabelValues(method, codeStr).Observe(d.Seconds())
-	if method == "GET" {
-		m.legacyGets.Inc()
-	}
 }
 
 // observeStore records a store call; result is "ok", "not_found", "timeout" or "error".

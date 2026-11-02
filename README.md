@@ -90,7 +90,6 @@ Prometheus metrics (text format):
 | `sis_db_pool_empty_acquires_total`, `_empty_acquire_wait_seconds_total` | counter | – | Acquires that waited because the pool was exhausted |
 | `sis_db_pool_canceled_acquires_total`, `_new_conns_total` | counter | – | Acquires cancelled by timeout; connections opened |
 | `go_*`, `process_*` | – | – | Go runtime and process metrics |
-| `subscribers_total` | counter | – | Deprecated: number of GET requests, use `sis_requests_total` |
 
 Useful queries:
 
