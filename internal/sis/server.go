@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/adaptor"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -47,7 +49,7 @@ func NewServer(c *Config, s Store) *Server {
 	server := &Server{
 		config:  c,
 		store:   s,
-		metrics: newMetrics(),
+		metrics: newMetrics(s),
 		app:     fiber.New(),
 	}
 
@@ -61,7 +63,7 @@ func NewServer(c *Config, s Store) *Server {
 	server.app.Get("/ready", server.getReady())
 	server.app.Get("/metrics", server.getMetrics())
 
-	subscribers := server.app.Group("/subscribers", server.countRequests())
+	subscribers := server.app.Group("/subscribers", server.observeRequests())
 	subscribers.Get("/:msisdn", server.getSubscriber())
 	subscribers.Put("/:msisdn", server.putSubscriber())
 
@@ -105,15 +107,13 @@ func (s *Server) getReady() fiber.Handler {
 }
 
 func (s *Server) getMetrics() fiber.Handler {
-	return func(c fiber.Ctx) error {
-		c.Set(fiber.HeaderContentType, "text/plain; version=0.0.4; charset=utf-8")
-		return c.SendString(s.metrics.render())
-	}
+	return adaptor.HTTPHandler(promhttp.HandlerFor(s.metrics.registry, promhttp.HandlerOpts{}))
 }
 
-// countRequests records method and response status of every subscriber request.
-func (s *Server) countRequests() fiber.Handler {
+// observeRequests records method, response status and duration of every subscriber request.
+func (s *Server) observeRequests() fiber.Handler {
 	return func(c fiber.Ctx) error {
+		start := time.Now()
 		err := c.Next()
 		status := c.Response().StatusCode()
 		if err != nil {
@@ -124,7 +124,7 @@ func (s *Server) countRequests() fiber.Handler {
 				status = fiber.StatusInternalServerError
 			}
 		}
-		s.metrics.inc(c.Method(), status)
+		s.metrics.observeRequest(c.Method(), status, time.Since(start))
 		return err
 	}
 }
@@ -139,7 +139,9 @@ func (s *Server) getSubscriber() fiber.Handler {
 		ctx, cancel := context.WithTimeout(c.Context(), s.config.DbTimeout)
 		defer cancel()
 
+		start := time.Now()
 		subscriber, err := s.store.Get(ctx, msisdn)
+		s.metrics.observeStore("get", storeResult(err), time.Since(start))
 		if errors.Is(err, ErrNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(response{ErrorID: errNotFound, ErrorMsg: "Not found"})
 		}
@@ -176,11 +178,28 @@ func (s *Server) putSubscriber() fiber.Handler {
 		ctx, cancel := context.WithTimeout(c.Context(), s.config.DbTimeout)
 		defer cancel()
 
-		if err := s.store.Set(ctx, subscriber); err != nil {
+		start := time.Now()
+		err := s.store.Set(ctx, subscriber)
+		s.metrics.observeStore("set", storeResult(err), time.Since(start))
+		if err != nil {
 			return s.storeError(c, "set", msisdn, err)
 		}
 
 		return c.SendStatus(fiber.StatusOK)
+	}
+}
+
+// storeResult classifies a store call outcome for metrics.
+func storeResult(err error) string {
+	switch {
+	case err == nil:
+		return "ok"
+	case errors.Is(err, ErrNotFound):
+		return "not_found"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout"
+	default:
+		return "error"
 	}
 }
 

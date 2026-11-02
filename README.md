@@ -11,7 +11,8 @@ for tests and benchmarks).
 - Startup check: the service refuses to start if the database is unreachable
   or the `subscribers` table does not match the expected schema.
 - Fast background generation of test data (`COPY` in batches of 100k).
-- Liveness (`/`) and readiness (`/ready`) probes, Prometheus metrics.
+- Liveness (`/`) and readiness (`/ready`) probes.
+- Prometheus metrics: request and store latency histograms, connection pool state, Go runtime.
 - Graceful shutdown on `SIGINT`/`SIGTERM`.
 - Docker Compose for local development.
 
@@ -77,19 +78,32 @@ Readiness probe: `200 OK` if the database answers a ping, `503` otherwise.
 
 ### `GET /metrics`
 
-Prometheus text format:
+Prometheus metrics (text format):
 
-```
-# TYPE sis_requests_total counter
-sis_requests_total{method="GET",code="200"} 1520
-sis_requests_total{method="GET",code="404"} 3
-sis_requests_total{method="PUT",code="200"} 12
-# TYPE subscribers_total counter
-subscribers_total 1523
-```
+| Metric | Type | Labels | Meaning |
+| --- | --- | --- | --- |
+| `sis_requests_total` | counter | `method`, `code` | Subscriber API requests |
+| `sis_request_duration_seconds` | histogram | `method`, `code` | Request latency (validation + store call) |
+| `sis_store_duration_seconds` | histogram | `op` (`get`/`set`), `result` (`ok`/`not_found`/`timeout`/`error`) | Store call latency; for PostgreSQL includes waiting for a pool connection |
+| `sis_db_pool_acquired_conns`, `_idle_conns`, `_total_conns`, `_constructing_conns`, `_max_conns` | gauge | – | pgx pool state |
+| `sis_db_pool_acquires_total`, `_acquire_duration_seconds_total` | counter | – | Connection acquires and time spent on them |
+| `sis_db_pool_empty_acquires_total`, `_empty_acquire_wait_seconds_total` | counter | – | Acquires that waited because the pool was exhausted |
+| `sis_db_pool_canceled_acquires_total`, `_new_conns_total` | counter | – | Acquires cancelled by timeout; connections opened |
+| `go_*`, `process_*` | – | – | Go runtime and process metrics |
+| `subscribers_total` | counter | – | Deprecated: number of GET requests, use `sis_requests_total` |
 
-`subscribers_total` (number of GET requests) is kept for existing dashboards
-and is deprecated in favour of `sis_requests_total`.
+Useful queries:
+
+```promql
+# p99 latency of successful GETs
+histogram_quantile(0.99, sum by (le) (rate(sis_request_duration_seconds_bucket{method="GET",code="200"}[5m])))
+
+# share of request time spent in the store (≈1 means the database is the bottleneck)
+sum(rate(sis_store_duration_seconds_sum[5m])) / sum(rate(sis_request_duration_seconds_sum[5m]))
+
+# pool exhaustion: acquires per second that had to wait for a free connection
+rate(sis_db_pool_empty_acquires_total[5m])
+```
 
 ## Configuration
 

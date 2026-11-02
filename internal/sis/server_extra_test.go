@@ -79,11 +79,20 @@ func TestServerReadyAndMetrics(t *testing.T) {
 
 	code, body := doRequest(t, server, http.MethodGet, "/metrics")
 	assert.Equal(t, http.StatusOK, code)
-	assert.Contains(t, body, "# TYPE sis_requests_total counter")
-	assert.Contains(t, body, `sis_requests_total{method="GET",code="200"} 2`)
-	assert.Contains(t, body, `sis_requests_total{method="GET",code="404"} 1`)
-	assert.Contains(t, body, `sis_requests_total{method="GET",code="400"} 1`)
-	assert.Contains(t, body, "subscribers_total 4")
+	for _, want := range []string{
+		"# TYPE sis_requests_total counter",
+		`sis_requests_total{code="200",method="GET"} 2`,
+		`sis_requests_total{code="404",method="GET"} 1`,
+		`sis_requests_total{code="400",method="GET"} 1`,
+		"# TYPE sis_request_duration_seconds histogram",
+		`sis_request_duration_seconds_count{code="200",method="GET"} 2`,
+		`sis_store_duration_seconds_count{op="get",result="ok"} 2`,
+		`sis_store_duration_seconds_count{op="get",result="not_found"} 1`,
+		"subscribers_total 4",
+		"go_goroutines",
+	} {
+		assert.Contains(t, body, want)
+	}
 }
 
 func TestParseMsisdn(t *testing.T) {

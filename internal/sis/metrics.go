@@ -1,81 +1,84 @@
 package sis
 
 import (
-	"fmt"
-	"sort"
-	"strings"
-	"sync"
-	"sync/atomic"
+	"strconv"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 )
 
-// metrics keeps request counters and renders them in the Prometheus text format.
+// latencyBuckets cover the range the service actually works in: from tens of
+// microseconds (in-memory, warm pool) up to the DB timeout.
+var latencyBuckets = []float64{
+	.0001, .00025, .0005, .001, .0025, .005, .01, .025, .05, .1, .25, .5, 1, 2.5,
+}
+
+// metrics holds the service's Prometheus collectors in a dedicated registry.
 type metrics struct {
-	mu       sync.RWMutex
-	requests map[requestKey]*atomic.Uint64
+	registry *prometheus.Registry
+
+	requests        *prometheus.CounterVec
+	requestDuration *prometheus.HistogramVec
+	storeDuration   *prometheus.HistogramVec
+	legacyGets      prometheus.Counter
 }
 
-type requestKey struct {
-	method string
-	code   int
+// collectorProvider is implemented by stores that expose their own metrics
+// (e.g. connection pool statistics).
+type collectorProvider interface {
+	Collector() prometheus.Collector
 }
 
-func newMetrics() *metrics {
-	return &metrics{requests: make(map[requestKey]*atomic.Uint64)}
-}
-
-func (m *metrics) inc(method string, code int) {
-	key := requestKey{method: method, code: code}
-
-	m.mu.RLock()
-	counter, ok := m.requests[key]
-	m.mu.RUnlock()
-
-	if !ok {
-		m.mu.Lock()
-		if counter, ok = m.requests[key]; !ok {
-			counter = &atomic.Uint64{}
-			m.requests[key] = counter
-		}
-		m.mu.Unlock()
+func newMetrics(store Store) *metrics {
+	m := &metrics{
+		registry: prometheus.NewRegistry(),
+		requests: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "sis_requests_total",
+			Help: "Subscriber API requests by method and response status.",
+		}, []string{"method", "code"}),
+		requestDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "sis_request_duration_seconds",
+			Help:    "Subscriber API request duration, including validation and the store call.",
+			Buckets: latencyBuckets,
+		}, []string{"method", "code"}),
+		storeDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "sis_store_duration_seconds",
+			Help:    "Duration of store calls (for PostgreSQL: pool acquire + query).",
+			Buckets: latencyBuckets,
+		}, []string{"op", "result"}),
+		legacyGets: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "subscribers_total",
+			Help: `Deprecated: use sis_requests_total{method="GET"}.`,
+		}),
 	}
 
-	counter.Add(1)
+	m.registry.MustRegister(
+		m.requests,
+		m.requestDuration,
+		m.storeDuration,
+		m.legacyGets,
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
+
+	if p, ok := store.(collectorProvider); ok {
+		m.registry.MustRegister(p.Collector())
+	}
+
+	return m
 }
 
-func (m *metrics) render() string {
-	m.mu.RLock()
-	keys := make([]requestKey, 0, len(m.requests))
-	for k := range m.requests {
-		keys = append(keys, k)
+func (m *metrics) observeRequest(method string, code int, d time.Duration) {
+	codeStr := strconv.Itoa(code)
+	m.requests.WithLabelValues(method, codeStr).Inc()
+	m.requestDuration.WithLabelValues(method, codeStr).Observe(d.Seconds())
+	if method == "GET" {
+		m.legacyGets.Inc()
 	}
-	m.mu.RUnlock()
+}
 
-	sort.Slice(keys, func(i, j int) bool {
-		if keys[i].method != keys[j].method {
-			return keys[i].method < keys[j].method
-		}
-		return keys[i].code < keys[j].code
-	})
-
-	var b strings.Builder
-	var gets uint64
-
-	b.WriteString("# HELP sis_requests_total Subscriber API requests by method and response status.\n")
-	b.WriteString("# TYPE sis_requests_total counter\n")
-	m.mu.RLock()
-	for _, k := range keys {
-		v := m.requests[k].Load()
-		if k.method == "GET" {
-			gets += v
-		}
-		fmt.Fprintf(&b, "sis_requests_total{method=%q,code=\"%d\"} %d\n", k.method, k.code, v)
-	}
-	m.mu.RUnlock()
-
-	// Kept for existing dashboards: number of GET /subscribers requests.
-	b.WriteString("# HELP subscribers_total Deprecated: use sis_requests_total{method=\"GET\"}.\n")
-	b.WriteString("# TYPE subscribers_total counter\n")
-	fmt.Fprintf(&b, "subscribers_total %d\n", gets)
-
-	return b.String()
+// observeStore records a store call; result is "ok", "not_found", "timeout" or "error".
+func (m *metrics) observeStore(op, result string, d time.Duration) {
+	m.storeDuration.WithLabelValues(op, result).Observe(d.Seconds())
 }

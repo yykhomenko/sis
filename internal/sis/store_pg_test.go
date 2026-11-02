@@ -2,6 +2,7 @@ package sis
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -59,6 +60,14 @@ func TestPGStore(t *testing.T) {
 	assert.WithinDuration(t, time.Now(), got.UpdatedAt, time.Hour*24)
 
 	assert.NoError(t, store.Ping(ctx))
+
+	t.Run("pool metrics", func(t *testing.T) {
+		server := NewServer(store.config, store)
+		code, body := doRequest(t, server, http.MethodGet, "/metrics")
+		assert.Equal(t, http.StatusOK, code)
+		assert.Contains(t, body, "sis_db_pool_max_conns 4")
+		assert.Contains(t, body, "sis_db_pool_acquires_total")
+	})
 
 	t.Run("Generate", func(t *testing.T) {
 		require.NoError(t, store.Generate(ctx))
