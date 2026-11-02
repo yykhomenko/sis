@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 const (
@@ -48,7 +48,7 @@ func NewServer(c *Config, s Store) *Server {
 		config:  c,
 		store:   s,
 		metrics: newMetrics(),
-		app:     fiber.New(fiber.Config{DisableStartupMessage: true}),
+		app:     fiber.New(),
 	}
 
 	for _, ndc := range c.NDCS {
@@ -70,7 +70,7 @@ func NewServer(c *Config, s Store) *Server {
 
 func (s *Server) Start() error {
 	log.Printf("http-server listening (%s)...\n", s.config.Addr)
-	return s.app.Listen(s.config.Addr)
+	return s.app.Listen(s.config.Addr, fiber.ListenConfig{DisableStartupMessage: true})
 }
 
 func (s *Server) Stop() error {
@@ -85,15 +85,15 @@ func (s *Server) Stop() error {
 
 // getRoot is the liveness probe: the process is up and serving HTTP.
 func (s *Server) getRoot() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
 	}
 }
 
 // getReady is the readiness probe: the service can reach its store.
 func (s *Server) getReady() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		ctx, cancel := context.WithTimeout(c.UserContext(), readyTimeout)
+	return func(c fiber.Ctx) error {
+		ctx, cancel := context.WithTimeout(c.Context(), readyTimeout)
 		defer cancel()
 
 		if err := s.store.Ping(ctx); err != nil {
@@ -105,7 +105,7 @@ func (s *Server) getReady() fiber.Handler {
 }
 
 func (s *Server) getMetrics() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		c.Set(fiber.HeaderContentType, "text/plain; version=0.0.4; charset=utf-8")
 		return c.SendString(s.metrics.render())
 	}
@@ -113,7 +113,7 @@ func (s *Server) getMetrics() fiber.Handler {
 
 // countRequests records method and response status of every subscriber request.
 func (s *Server) countRequests() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		err := c.Next()
 		status := c.Response().StatusCode()
 		if err != nil {
@@ -130,13 +130,13 @@ func (s *Server) countRequests() fiber.Handler {
 }
 
 func (s *Server) getSubscriber() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		msisdn, apiErr := s.parseMsisdn(c.Params("msisdn"))
 		if apiErr != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(apiErr)
 		}
 
-		ctx, cancel := context.WithTimeout(c.UserContext(), s.config.DbTimeout)
+		ctx, cancel := context.WithTimeout(c.Context(), s.config.DbTimeout)
 		defer cancel()
 
 		subscriber, err := s.store.Get(ctx, msisdn)
@@ -152,14 +152,14 @@ func (s *Server) getSubscriber() fiber.Handler {
 }
 
 func (s *Server) putSubscriber() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		msisdn, apiErr := s.parseMsisdn(c.Params("msisdn"))
 		if apiErr != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(apiErr)
 		}
 
 		var req putSubscriberRequest
-		if err := c.BodyParser(&req); err != nil {
+		if err := c.Bind().Body(&req); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: errInvalidBody, ErrorMsg: "Invalid request body: " + err.Error()})
 		}
 		if err := req.validate(); err != nil {
@@ -173,7 +173,7 @@ func (s *Server) putSubscriber() fiber.Handler {
 			OperatorType: *req.OperatorType,
 		}
 
-		ctx, cancel := context.WithTimeout(c.UserContext(), s.config.DbTimeout)
+		ctx, cancel := context.WithTimeout(c.Context(), s.config.DbTimeout)
 		defer cancel()
 
 		if err := s.store.Set(ctx, subscriber); err != nil {
@@ -185,7 +185,7 @@ func (s *Server) putSubscriber() fiber.Handler {
 }
 
 // storeError logs a store failure and maps it to a 504 (timeout) or 500 response.
-func (s *Server) storeError(c *fiber.Ctx, op string, msisdn int64, err error) error {
+func (s *Server) storeError(c fiber.Ctx, op string, msisdn int64, err error) error {
 	log.Printf("%s subscriber %d: %v\n", op, msisdn, err)
 	if errors.Is(err, context.DeadlineExceeded) {
 		return c.Status(fiber.StatusGatewayTimeout).JSON(response{ErrorID: errDBTimeout, ErrorMsg: "DB timeout"})

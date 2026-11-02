@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +37,7 @@ func (s *stubStore) Close()                     {}
 
 func doRequest(t *testing.T, server *Server, method, path string) (int, string) {
 	t.Helper()
-	resp, err := server.app.Test(httptest.NewRequest(method, path, nil), -1)
+	resp, err := server.app.Test(httptest.NewRequest(method, path, nil), fiber.TestConfig{Timeout: 0})
 	require.NoError(t, err)
 	body, _ := io.ReadAll(resp.Body)
 	return resp.StatusCode, string(body)
