@@ -24,6 +24,7 @@ services:
       retries: 300
 
   sis:
+    build: .
     image: yykhomenko/sis:latest
     env_file:
       - ./.env

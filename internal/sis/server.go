@@ -130,21 +130,19 @@ func (s *Server) putSubscriber() func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 2, ErrorMsg: "Not supported MSISDN format: " + msisdn})
 		}
 
-		req := struct {
-			BillingType  int16 `json:"billing_type"`
-			LanguageType int16 `json:"language_type"`
-			OperatorType int16 `json:"operator_type"`
-		}{}
-
+		var req putSubscriberRequest
 		if err := c.BodyParser(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 2, ErrorMsg: "Invalid request body, err: " + err.Error()})
+			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 5, ErrorMsg: "Invalid request body: " + err.Error()})
+		}
+		if err := req.validate(); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(response{ErrorID: 5, ErrorMsg: "Invalid request body: " + err.Error()})
 		}
 
 		subscriber := &Subscriber{
 			Msisdn:       m,
-			BillingType:  req.BillingType,
-			LanguageType: req.LanguageType,
-			OperatorType: req.OperatorType,
+			BillingType:  *req.BillingType,
+			LanguageType: *req.LanguageType,
+			OperatorType: *req.OperatorType,
 		}
 
 		if err := s.store.Set(c.Context(), subscriber); err != nil {
@@ -154,6 +152,34 @@ func (s *Server) putSubscriber() func(c *fiber.Ctx) error {
 
 		return c.SendStatus(fiber.StatusOK)
 	}
+}
+
+// putSubscriberRequest uses pointers so a missing field can be told apart
+// from an explicit 0: PUT replaces the whole profile, so every field is required.
+type putSubscriberRequest struct {
+	BillingType  *int16 `json:"billing_type"`
+	LanguageType *int16 `json:"language_type"`
+	OperatorType *int16 `json:"operator_type"`
+}
+
+func (r putSubscriberRequest) validate() error {
+	fields := []struct {
+		name  string
+		value *int16
+	}{
+		{"billing_type", r.BillingType},
+		{"language_type", r.LanguageType},
+		{"operator_type", r.OperatorType},
+	}
+	for _, f := range fields {
+		if f.value == nil {
+			return fmt.Errorf("%s is required", f.name)
+		}
+		if *f.value < 0 {
+			return fmt.Errorf("%s must not be negative", f.name)
+		}
+	}
+	return nil
 }
 
 func validateMsisdnLen(msisdn string, length int) bool {

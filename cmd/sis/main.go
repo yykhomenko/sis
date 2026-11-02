@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"os"
 	"os/signal"
@@ -14,9 +16,22 @@ func main() {
 	config := sis.NewConfig()
 
 	store := sis.NewStorePG(config)
-	server := sis.NewServer(config, store)
-
 	defer store.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // runs before store.Close, so generation stops first
+
+	if config.Generate {
+		if g, ok := store.(sis.Generator); ok {
+			go func() {
+				if err := g.Generate(ctx); err != nil && !errors.Is(err, context.Canceled) {
+					log.Printf("generate error: %v\n", err)
+				}
+			}()
+		}
+	}
+
+	server := sis.NewServer(config, store)
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- server.Start() }()

@@ -27,6 +27,11 @@ type Store interface {
 	Close()
 }
 
+// Generator is implemented by stores that can fill themselves with test data.
+type Generator interface {
+	Generate(ctx context.Context) error
+}
+
 // msisdnRange returns the first and last MSISDN of a block of `capacity`
 // numbers for the given CC and NDC, where every MSISDN has `length` digits.
 // E.g. cc="380", ndc=67, capacity=10_000_000, length=12 ->

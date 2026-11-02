@@ -1,0 +1,9 @@
+.env
+.env.*
+.git
+.idea
+.vscode
+.DS_Store
+db/data
+Query.sql
+/sis
